@@ -157,19 +157,127 @@ int main( int argc, char* args[] ) {
 
   //Define a World Mesher?
 
+  int minfps = 60;
+  int rate = 1;
+  int grows = 0;
+
+  double* smooth = new double[world.dim.x*world.dim.y];
+  
   Tiny::loop([&](){
+
+    rotation+=0.1;
+    camera = glm::rotate(glm::lookAt(cameraPos, lookPos, glm::vec3(0,1,0)), glm::radians(rotation), glm::vec3(0,1,0));
+
     //Do Erosion Cycles!
     if(!paused){
       //Erode the World and Update the Model
-      world.erode(250);
-      world.grow();
+
+      uint32_t t0 = SDL_GetTicks();
+
+      int erodes = 250 / rate;
+      grows += erodes;
+
+      double smoothness = 0.01;
+      double sharpness = 1.0 - smoothness;
+
+      world.erode(erodes);
+      if (grows > 250)
+      {
+        grows -= 250;
+        world.grow();
+
+        // do x-smoothing
+        for(int y = 0; y < world.dim.y; y++)
+        {
+          {
+            int x = 0;
+            int i = x*world.dim.y + y;
+            smooth[i] = world.heightmap[i]*sharpness + world.heightmap[i+world.dim.y]*smoothness;
+          }
+
+          for(int x = 1; x < world.dim.x-1; x++)
+          {
+            int i = x*world.dim.y + y;
+            smooth[i] = world.heightmap[i]*sharpness + (world.heightmap[i-world.dim.y] + world.heightmap[i+world.dim.y])*0.5*smoothness;
+          }
+
+          {
+            int x = world.dim.x-1;
+            int i = x*world.dim.y + y;
+            smooth[i] = world.heightmap[i]*sharpness + world.heightmap[i-world.dim.y]*smoothness;
+          }
+        }
+
+        // do y-smoothing
+        for(int x = 0; x < world.dim.x; x++)
+        {
+          {
+            int y = 0;
+            int i = x*world.dim.y + y;
+            smooth[i] = smooth[i]*sharpness + smooth[i+1]*smoothness;
+
+            //if (world.waterpool[i]>0.01)
+            //  smooth[i] -= smoothness*100;
+          }
+
+          for(int y = 1; y < world.dim.y-1; y++)
+          {
+            int i = x*world.dim.y + y;
+            world.heightmap[i] = smooth[i]*sharpness + (smooth[i-1] + smooth[i+1])*0.5*smoothness;
+
+            //if (world.waterpool[i]>0.01)
+            //  smooth[i] -= smoothness*100;
+          }
+
+          {
+            int y = world.dim.y-1;
+            int i = x*world.dim.y + y;
+            smooth[i] = smooth[i]*sharpness + smooth[i-1]*smoothness;
+
+            //if (world.waterpool[i]>0.01)
+            //  smooth[i] -= smoothness*100;
+          }
+        }        
+      }
+
       model.construct(constructor); //Reconstruct Updated Model
+
+      uint32_t t1 = SDL_GetTicks();
+
+      rate = 250 * (t1-t0) * minfps / (1000*erodes);
+      if (!rate)
+        rate = 1;
+      if (rate>250)
+        rate=250;
+
+      // printf("rate=%d\n",rate);
+
+      /*
+      SDL_Surface* surf;
+      surf = SDL_CreateRGBSurface(0,world.dim.x,world.dim.y,32,0xFF<<0,0xFF<<8,0xFF<<16,0xFF<<24);
+      SDL_LockSurface(surf);
+      for (int i=0; i<world.dim.x*world.dim.y; i++)
+      {
+        uint32_t p = 0xFF<<24;
+
+        p |= (int)(world.heightmap[i]*255)<<0;
+        p |= (int)(world.waterpath[i]*255)<<16;
+        p |= (int)(world.waterpool[i]*255)<<8;
+
+        ((uint32_t*)surf->pixels)[i] = p;
+      }
+      SDL_UnlockSurface(surf);
+      IMG_SavePNG(surf,"hydrology.png");
+      SDL_FreeSurface(surf);
+      */
 
       //Redraw the Path and Death Image
       if(viewmap) // make map transposed
         map.raw(image::makeT<double>(world.dim, world.waterpath, world.waterpool, hydromap));
     }
   });
+
+  delete [] smooth;
 
   return 0;
 }

@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"ostream": "cpp",
+			"*.ipp": "cpp",
+			"bit": "cpp",
+			"*.tcc": "cpp",
+			"bitset": "cpp",
+			"optional": "cpp",
+			"valarray": "cpp"
+		}
+	}
+}

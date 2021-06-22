@@ -23,7 +23,9 @@ public:
 };
 
 void Event::input(){
-  if(SDL_PollEvent(&in) == 0) return;
+
+  //if(SDL_PollEvent(&in) == 0) return;
+  while (SDL_PollEvent(&in)) {
 
   if(in.type == SDL_QUIT) quit = true;
   ImGui_ImplSDL2_ProcessEvent(&in);
@@ -50,6 +52,8 @@ void Event::input(){
     windowEvent = in;
     windowEventTrigger = true;
     return;
+  }
+
   }
 }
 

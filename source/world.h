@@ -65,9 +65,35 @@ void World::generate(){
     if(heightmap[i] > max) max = heightmap[i];
     if(heightmap[i] < min) min = heightmap[i];
   }
+
+  double lx = dim.x*0.5;
+  double ly = dim.y*0.5;
+  double hx = dim.x*0.1;
+  double hy = dim.y*0.1;
+
   //Normalize
   for(int i = 0; i < dim.x*dim.y; i++){
     heightmap[i] = (heightmap[i] - min)/(max - min);
+
+    // island shaper
+    /*
+    double x = i / dim.y;
+    double y = i % dim.y;
+
+    double rx = fabs(x-lx);
+    double ry = fabs(y-ly);
+
+    if (rx > hx)
+    {
+      double m = 0.5-0.5*cos(M_PI*(rx-lx)/(hx-lx));
+      heightmap[i] *= m;
+    }
+    if (ry > hy)
+    {
+      double m = 0.5-0.5*cos(M_PI*(ry-ly)/(hy-ly));
+      heightmap[i] *= m;
+    }
+    */
   }
 }
 
@@ -343,7 +369,7 @@ std::function<void(Model* m)> constructor = [](Model* m){
 
 std::function<void()> eventHandler = [](){
 
-  if(!Tiny::event.scroll.empty()){
+  while(!Tiny::event.scroll.empty()){
 
     if(Tiny::event.scroll.back().wheel.y > 0.99 && zoom <= 0.3){
       zoom /= 0.975;
@@ -370,7 +396,7 @@ std::function<void()> eventHandler = [](){
     Tiny::event.scroll.pop_back();
   }
 
-  if(!Tiny::event.keys.empty()){
+  while(!Tiny::event.keys.empty()){
 
     if(Tiny::event.keys.back().key.keysym.sym == SDLK_p){
       paused = !paused;
