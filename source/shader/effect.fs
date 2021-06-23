@@ -11,6 +11,9 @@ void main(){
 
     //Add Distance Fog
     float depthVal = clamp(texture(depthTexture, ex_Tex).r, 0.0, 1.0);
+
+    depthVal = 0.55; // no fog
+
     if(depthVal < 1.0)  //If it is a visible thing...
       fragColor = mix(fragColor, vec4(1.0), pow(3*(depthVal-0.55),2));  //White Fog Color!
 }

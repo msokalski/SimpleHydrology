@@ -33,25 +33,25 @@ void Event::input(){
   if(in.type == SDL_KEYUP){
     if(in.key.keysym.sym == SDLK_F11) fullscreenToggle = true;
     else keys.push_front(in);
-    return;
+    continue; //return;
   }
 
   if(in.type == SDL_MOUSEWHEEL){
     scroll.push_front(in);
-    return;
+    continue; //return;
   }
 
   if(in.type == SDL_MOUSEBUTTONDOWN ||
      in.type == SDL_MOUSEBUTTONUP){
        mouseEvent = in;
        mouseEventTrigger = true;
-       return;
+       continue; //return;
   }
 
   if(in.type == SDL_WINDOWEVENT){
     windowEvent = in;
     windowEventTrigger = true;
-    return;
+    continue; //return;
   }
 
   }

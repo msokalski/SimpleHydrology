@@ -94,11 +94,15 @@ template<typename F, typename... Args>
 void loop(F function, Args&&... args){
   while(!event.quit){
     event.input();        //Handle Input
-    event.handle(view);
 
-    audio.process();      //Audio Processor
+    while (!event.scroll.empty() || !event.keys.empty())
+    {
+      event.handle(view);
+    }
 
     function(args...);    //User-defined Game Loop
+    audio.process();      //Audio Processor
+
 
     view.render();        //Render View
   }

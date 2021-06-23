@@ -174,7 +174,7 @@ int main( int argc, char* args[] ) {
 
       uint32_t t0 = SDL_GetTicks();
 
-      int erodes = 250 / rate;
+      int erodes = world.dim.x * world.dim.y * 250 / (256*256*rate);
       grows += erodes;
 
       double smoothness = 0.01;
@@ -237,8 +237,9 @@ int main( int argc, char* args[] ) {
             //if (world.waterpool[i]>0.01)
             //  smooth[i] -= smoothness*100;
           }
-        }        
+        }
       }
+
 
       model.construct(constructor); //Reconstruct Updated Model
 
@@ -249,6 +250,8 @@ int main( int argc, char* args[] ) {
         rate = 1;
       if (rate>250)
         rate=250;
+
+      rate = 1;
 
       // printf("rate=%d\n",rate);
 

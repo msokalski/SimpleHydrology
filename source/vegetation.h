@@ -12,7 +12,7 @@ struct Plant{
   glm::vec2 pos;
   int index;
   float size = 0.5;
-  const float maxsize = 1.0;
+  const float maxsize = 5.0;
   const float rate = 0.05;
 
   void grow();
@@ -35,6 +35,29 @@ void Plant::grow(){
 
 
 void Plant::root(double* density, glm::ivec2 dim, double f){
+
+  int ix = index / dim.y;
+  int iy = index % dim.y;
+
+  int r = (int)round(maxsize);
+
+  int x_lo = max(ix-r,0);
+  int x_hi = min(ix+r,dim.x-1);
+  int y_lo = max(iy-r,0);
+  int y_hi = min(iy+r,dim.y-1);
+
+  for (int x=x_lo; x<=x_hi; x++)
+  {
+    int dx = x-ix;
+    for (int y=y_lo; y<=y_hi; y++)
+    {
+      int dy = y-iy;
+      double m = 1+dx*dx+dy*dy;
+      density[x*dim.y+y] += f; // /m;
+    }
+  }
+
+  return;
 
   //Can always do this one
   density[index]       += f*1.0;

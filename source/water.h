@@ -136,10 +136,12 @@ void Drop::flood(double* h, double* p, glm::ivec2 dim){
     int drain;
     bool drainfound = false;
 
+    int depth = 1;
+
     std::function<void(int)> fill = [&](int i){
 
       //Out of Bounds
-      if(i < 0 || i >= size) return;
+      if(depth>=333 || i < 0 || i >= size) return;
 
       //Position has been tried
       if(tried[i]) return;
@@ -165,6 +167,8 @@ void Drop::flood(double* h, double* p, glm::ivec2 dim){
 
       //Part of the Pool
       set.push_back(i);
+
+      depth++;
       fill(i+dim.y);    //Fill Neighbors
       fill(i-dim.y);
       fill(i+1);
@@ -173,6 +177,7 @@ void Drop::flood(double* h, double* p, glm::ivec2 dim){
       fill(i-dim.y-1);
       fill(i+dim.y-1);
       fill(i-dim.y+1);
+      depth--;
     };
 
     //Perform Flood

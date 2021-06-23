@@ -1,6 +1,8 @@
 #include "vegetation.h"
 #include "water.h"
 
+float steepness = 0.95;//0.8;
+
 class World{
 public:
   //Constructor
@@ -8,14 +10,16 @@ public:
   void erode(int cycles);               //Erode with N Particles
   void grow();
 
-  static const int width = 256;
-  static const int height = 256;
+  static const int width = 1024;
+  static const int height = 1024;
   static const int size = width*height;
+
+  const float diag = sqrtf(width*width+height*height);
 
   int SEED = 0;
   glm::ivec2 dim = glm::vec2(width, height);  //Size of the heightmap array
 
-  double scale = 40.0;                  //"Physical" Height scaling of the map
+  double scale = 3*40.0;                  //"Physical" Height scaling of the map
   double heightmap[size] = {0.0};    //Flat Array
 
   double waterpath[size] = {0.0};    //Water Path Storage (Rivers)
@@ -60,7 +64,7 @@ void World::generate(){
     double x = i / dim.y;
     double y = i % dim.y;
 
-    heightmap[i] = perlin.GetValue(x/dim.x, y/dim.y, SEED);
+    heightmap[i] = perlin.GetValue(x/256.0/*dim.x*/, y/256.0/*dim.y*/, SEED);
 
     if(heightmap[i] > max) max = heightmap[i];
     if(heightmap[i] < min) min = heightmap[i];
@@ -76,7 +80,6 @@ void World::generate(){
     heightmap[i] = (heightmap[i] - min)/(max - min);
 
     // island shaper
-    /*
     double x = i / dim.y;
     double y = i % dim.y;
 
@@ -93,7 +96,6 @@ void World::generate(){
       double m = 0.5-0.5*cos(M_PI*(ry-ly)/(hy-ly));
       heightmap[i] *= m;
     }
-    */
   }
 }
 
@@ -143,7 +145,7 @@ void World::grow(){
 
     if( waterpool[i] == 0.0 &&
         waterpath[i] < 0.2 &&
-        n.y > 0.8 ){
+        n.y > steepness ){
 
         Plant ntree(i, dim);
         ntree.root(plantdensity, dim, 1.0);
@@ -159,8 +161,11 @@ void World::grow(){
 
     //Spawn a new Tree!
     if(rand()%50 == 0){
+
+      int r = (int)round(trees[i].maxsize);
+
       //Find New Position
-      glm::vec2 npos = trees[i].pos + glm::vec2(rand()%9-4, rand()%9-4);
+      glm::vec2 npos = trees[i].pos + glm::vec2(rand()%(r*9)-r*4, rand()%(r*9)-r*4);
 
       //Check for Out-Of-Bounds
       if( npos.x >= 0 && npos.x < dim.x &&
@@ -171,7 +176,7 @@ void World::grow(){
 
         if( waterpool[ntree.index] == 0.0 &&
             waterpath[ntree.index] < 0.2 &&
-            n.y > 0.8 &&
+            n.y > steepness &&
             (double)(rand()%1000)/1000.0 > plantdensity[ntree.index]){
               ntree.root(plantdensity, dim, 1.0);
               trees.push_back(ntree);
@@ -212,13 +217,13 @@ float rotation = 0.0f;
 glm::vec3 cameraPos = glm::vec3(50, 50, 50);
 glm::vec3 lookPos = glm::vec3(0, 0, 0);
 glm::mat4 camera = glm::lookAt(cameraPos, lookPos, glm::vec3(0,1,0));
-glm::mat4 projection = glm::ortho(-(float)WIDTH*zoom, (float)WIDTH*zoom, -(float)HEIGHT*zoom, (float)HEIGHT*zoom, -800.0f, 500.0f);
+glm::mat4 projection = glm::ortho(-(float)WIDTH*zoom, (float)WIDTH*zoom, -(float)HEIGHT*zoom, (float)HEIGHT*zoom, -world.diag/2, +world.diag/2);
 
 glm::vec3 viewPos = glm::vec3(world.dim.x/2.0, world.scale/2.0, world.dim.y/2.0);
 
 //Shader Stuff
-float steepness = 0.8;
 glm::vec3 flatColor = glm::vec3(0.40, 0.60, 0.25);
+glm::vec3 sandColor = glm::vec3(0.40, 0.30, 0.15);
 glm::vec3 waterColor = glm::vec3(0.17, 0.40, 0.44);
 glm::vec3 steepColor = glm::vec3(0.7);
 //glm::vec3 steepColor = glm::vec3(0.78, 0.6, 0.168);
@@ -230,7 +235,7 @@ glm::vec3 lightPos = glm::vec3(-100.0f, 100.0f, -150.0f);
 glm::vec3 lightCol = glm::vec3(1.0f, 1.0f, 0.9f);
 float lightStrength = 1.4;
 glm::mat4 depthModelMatrix = glm::mat4(1.0);
-glm::mat4 depthProjection = glm::ortho<float>(-300, 300, -300, 300, 0, 800);
+glm::mat4 depthProjection = glm::ortho<float>(-world.diag/2, world.diag/2, -world.diag/2, world.diag/2, 0, world.diag);
 glm::mat4 depthCamera = glm::lookAt(lightPos, glm::vec3(0), glm::vec3(0,1,0));
 bool viewmap = true;
 
@@ -247,6 +252,9 @@ std::function<void(Model* m)> constructor = [](Model* m){
   m->positions.clear();
   m->normals.clear();
   m->colors.clear();
+
+  const float water_lo = 0.05;
+  const float water_hi = 0.95;
 
   //Loop over all positions and add the triangles!
   for(int i = 0; i < world.dim.x-1; i++){
@@ -284,7 +292,19 @@ std::function<void(Model* m)> constructor = [](Model* m){
 
       //See if we are water or not!
       if(water1) color = waterColor;
-      else color = glm::mix(flatColor, waterColor, p);
+      else 
+      {
+        //color = glm::mix(flatColor, waterColor, p);
+        if (p<water_lo)
+          color = flatColor;
+        else
+        if (p>water_hi)
+          color = waterColor;
+        else
+          // color = mix(flatColor,waterColor,(p-water_lo)/(water_hi-water_lo));
+          // color = sandColor; 
+          color = mix(flatColor,sandColor,(p-water_lo)/(water_hi-water_lo));
+      }
 
       //Add Indices
       m->indices.push_back(m->positions.size()/3+0);
@@ -326,7 +346,19 @@ std::function<void(Model* m)> constructor = [](Model* m){
 
       //Lower Triangle
       if(water2) color = waterColor;
-      else color = glm::mix(flatColor, waterColor, p);
+      else 
+      {
+        // color = glm::mix(flatColor, waterColor, p);
+        if (p<water_lo)
+          color = flatColor;
+        else
+        if (p>water_hi)
+          color = waterColor;
+        else
+          // color = mix(flatColor,waterColor,(p-water_lo)/(water_hi-water_lo));
+          // color = sandColor; 
+          color = mix(flatColor,sandColor,(p-water_lo)/(water_hi-water_lo));
+      }
 
       m->indices.push_back(m->positions.size()/3+0);
       m->indices.push_back(m->positions.size()/3+1);
@@ -373,11 +405,11 @@ std::function<void()> eventHandler = [](){
 
     if(Tiny::event.scroll.back().wheel.y > 0.99 && zoom <= 0.3){
       zoom /= 0.975;
-      projection = glm::ortho(-(float)WIDTH*zoom, (float)WIDTH*zoom, -(float)HEIGHT*zoom, (float)HEIGHT*zoom, -800.0f, 500.0f);
+      projection = glm::ortho(-(float)WIDTH*zoom, (float)WIDTH*zoom, -(float)HEIGHT*zoom, (float)HEIGHT*zoom, -world.diag/2, +world.diag/2);
     }
     else if(Tiny::event.scroll.back().wheel.y < -0.99 && zoom > 0.005){
       zoom *= 0.975;
-      projection = glm::ortho(-(float)WIDTH*zoom, (float)WIDTH*zoom, -(float)HEIGHT*zoom, (float)HEIGHT*zoom, -800.0f, 500.0f);
+      projection = glm::ortho(-(float)WIDTH*zoom, (float)WIDTH*zoom, -(float)HEIGHT*zoom, (float)HEIGHT*zoom, -world.diag/2, +world.diag/2);
     }
     else if(Tiny::event.scroll.back().wheel.x < -0.8){
       rotation += 1.5f;
