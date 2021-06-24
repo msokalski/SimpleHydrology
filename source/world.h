@@ -122,8 +122,8 @@ void World::erode(int cycles){
 
       drop.descend(heightmap, waterpath, waterpool, track, plantdensity, dim, scale);
 
-      if(drop.volume > drop.minVol)
-        drop.flood(heightmap, waterpool, dim);
+    //  if(drop.volume > drop.minVol)
+    //    drop.flood(heightmap, waterpool, dim);
 
       spill--;
     }
